@@ -1,0 +1,261 @@
+﻿@model VehicleMaintenanceModel
+@{
+    ViewData["Title"] = "Vehicle Maintenance";
+}
+<link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+
+<div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
+    <div class="panel panel-default" data-panel-close="false">
+        <div class="panel-heading" id="divReportParmTitle"><span class="label label-primary" id="lblReportParmTitle"></span></div>
+        <button class="btn btn-success pull-right" data-toggle="modal" data-target="#addVehicleMaintenanceModal" style="margin-top: -6px;">
+            Add New Vehicle Maintenance
+        </button>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="panel-body">
+                    <div class="comment-box">
+                        <div class="table-responsive">
+                            <table class="table js-exportable table-hover dataTable no-footer" role="grid" id="VehicleMaintenanceTable">
+                                <thead>
+                                    <tr>
+                                        <th>Sr#</th>
+                                        <th>ID</th>
+                                        <th>Make</th>
+                                        <th>Model</th>
+                                        <th>Year</th>
+                                        <th>LicensePlate</th>
+                                        <th>Type</th>
+                                        <th>Date</th>
+                                        <th>Description</th>
+                                        <th>Notes</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                </tbody>
+
+
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addVehicleMaintenanceModal" tabindex="-1" role="dialog" aria-labelledby="addVehicleMaintenanceModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addVehicleMaintenanceModalLabel">Add New Vehicle Maintenance</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="vehicleMaintenanceForm">
+                    <div class="form-group">
+                        <label for="VehicleID">Vehicle</label>
+                        @Html.DropDownListFor(modelItem => Model.VehicleID, (IEnumerable<SelectListItem>)ViewBag.Vehicle, new { @class = "form-control", @id = "VehicleID" })
+
+                    </div>
+                    <div class="form-group">
+                        <label for="MaintenanceType">Maintenance Activity</label>
+                        <input asp-for="MaintenanceID" type="text" class="form-control" id="MaintenanceType" name="MaintenanceType">
+                    </div>
+                    <div class="form-group">
+                        <label for="date">Date</label>
+                        <input asp-for="MaintenanceDate" type="date" class="form-control" id="date" name="MaintenanceDate" value="@DateTime.Now.ToString("dd-MM-yyyy")">
+                    </div>
+                    <div class="form-group">
+                        <label>IsCompleted</label>
+                        <input asp-for=IsCompleted type="checkbox" id="IsCompleted" />
+
+                    </div>
+                    <div class="form-group">
+                        <label for="MaintenanceCost">MaintenanceCost</label>
+                        <input asp-for="MaintenanceCost" type="number" class="form-control" id="MaintenanceCost" name="MaintenanceCost">
+                    </div>
+                    <div class="form-group">
+                        <label for="description">Description</label>
+                        <textarea asp-for="Description" class="form-control" id="description" name="Description"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="notes">Notes</label>
+                        <textarea asp-for="Notes" class="form-control" id="notes" name="Notes"></textarea>
+                    </div>
+                    <button type="button" class="btn btn-primary" id="btnAddMaintenanceActivity">Save</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.5/js/jquery.dataTables.min.js"></script>
+
+<script>
+    let isEdit = false;
+
+    $(function () {
+        debugger;
+
+        GetMaintenanceRecords();
+        //$('#addVehicleMaintenanceModal').modal('show');
+        $("#btnAddMaintenanceActivity").click(function (event) {
+            event.preventDefault();
+
+            debugger;
+
+            var url = '@Url.Action("SaveVehicleMaintenance", "VehicleMaintenance")';
+            var formdata = new FormData($('form')[0]);
+            var MaintenanceID = $(this).attr("MaintenanceID");
+            formdata.append('MaintenanceID', MaintenanceID);
+            formdata.append('IsEdit', isEdit);
+
+            $.ajax({
+                type: "POST",
+                url: url,
+                data: formdata,
+                processData: false,
+                contentType: false,
+                success: function (response) {
+                    if (response.success) {
+                        alert(response.responseText);
+                        GetMaintenanceRecords();
+                        ClearForm();
+                    } else {
+                        alert('Error saving vehicle maintenance');
+                    }
+                },
+                error: function (response) {
+                    alert(response.responseText);
+                }
+            });
+            $('#addVehicleMaintenanceModal').modal('hide');
+            return false;
+        });
+    });
+
+    function GetMaintenanceRecords() {
+        $.ajax({
+            url: '@Url.Action("GetMaintenanceRecord", "VehicleMaintenance")',
+            method: 'GET',
+            dataType: 'json',
+            success: function (response) {
+                var tableBody = $('#VehicleMaintenanceTable tbody');
+                tableBody.empty();
+                console.log(response.data);
+                if (response.success && response.data.length === 0) {
+                    var noRecordsRow = `
+                        <tr>
+                            <td colspan="12" style="text-align:center;">No records found</td>
+                        </tr>
+                    `;
+                    tableBody.append(noRecordsRow);
+                } else {
+                    $.each(response.data, function (index, record) {
+                        var row = `
+                            <tr>
+                                <td>${index + 1}</td>
+                                    <td>${record.maintenanceID}</td>
+                                    <td>${record.make}</td>
+                                    <td>${record.model}</td>
+                                    <td>${record.year}</td>
+                                    <td>${record.licensePlate}</td>
+                                    <td>${record.maintenanceType}</td>
+                                    <td>${new Date(record.maintenanceDate).toLocaleDateString()}</td>
+                                    <td>${record.description}</td>
+                                    <td>${record.notes}</td>
+                                <td>
+                                                        <button class="btn btn-primary btn-edit" onclick="editMaintenanceRecord(${record.maintenanceID})">Edit</button>
+                                                <button class="btn btn-danger btn-delete" onclick="deleteVehicleMaintenance(${record.maintenanceID})">Delete</button>
+                                </td>
+                            </tr>
+                        `;
+                        tableBody.append(row);
+                    });
+                }
+
+                $('#VehicleMaintenanceTable').DataTable();
+            },
+            error: function (error) {
+                console.error('Error fetching data:', error);
+            }
+        });
+    }
+
+    function editMaintenanceRecord(maintenanceID) {
+        $("#btnAddMaintenanceActivity").attr("MaintenanceID", maintenanceID);
+
+        $.ajax({
+            url: '@Url.Action("GetMaintenanceRecordById", "VehicleMaintenance")',
+            method: 'GET',
+            data: { id: maintenanceID },
+            dataType: 'json',
+            success: function (response) {
+                if (response.success && response.data) {
+                    var maintenance = response.data[0];
+                    var formattedDate = new Date(maintenance.maintenanceDate).toISOString().split('T')[0];
+                    console.log(maintenance);
+                    $('#addVehicleMaintenanceModal').modal('show');
+
+                    $('#VehicleID').val(maintenance.vehicleID);
+                    $('#MaintenanceType').val(maintenance.maintenanceType);
+                    $('#MaintenanceCost').val(maintenance.maintenanceCost);
+                    $('#date').val(formattedDate);
+                    $('#description').val(maintenance.description);
+                    $('#notes').val(maintenance.notes);
+                    $('#IsCompleted').prop('checked', maintenance.isCompleted);
+                    isEdit = true;
+
+                } else {
+                    alert('Failed to load maintenance record.');
+                }
+            },
+            error: function (error) {
+                console.error('Error fetching maintenance record:', error);
+            }
+        });
+    }
+
+
+    function deleteVehicleMaintenance(maintenanceID) {
+        debugger;
+        if (confirm("Are you sure you want to delete this vehicle?")) {
+            $.ajax({
+                url: '@Url.Action("deleteVehicleMaintenance", "VehicleMaintenance")',
+                method: 'POST',
+                data: { MaintenanceID: maintenanceID },
+                success: function (response) {
+                    alert("Vehicle deleted successfully");
+                    GetMaintenanceRecords();
+                },
+                error: function (error) {
+                    console.error("Error deleting vehicle:", error);
+                }
+            });
+        }
+    }
+
+
+    function ClearForm() {
+        $('form')[0].reset();
+        $("#VehicleID").val("");
+        $('#VehicleID').trigger("chosen:updated");
+        $('#MaintenanceType').val("");
+        $('#date').val("");
+        $('#MaintenanceCost').val("");
+        $('#description').val("");
+        $('#notes').val("");
+        $('#IsCompleted').prop('checked', false);
+        isEdit = false;
+    }
+
+</script>
